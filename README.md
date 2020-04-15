@@ -26,7 +26,7 @@ Header:
 `Name, Profile, Failed?, Skill Average, Slayer XP, Combat, Foraging, Mining, Fishing, Farming, Alchemy, Enchanting, Zombie, Spider, Wolf, Gifts, Given, Deaths, Purse`
 
 # TODO
-- The columns should be more customizable to the user, make a file to store the format and provide some basic formats
+- The columns should be more customizable to the user, the program should read the header and then populate the columns accordingly.
 - Add more values that can be used in the spreadsheet
 - Organize code into separate files
 - Remove magic numbers
