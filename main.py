@@ -10,17 +10,30 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import sys
+import argparse
 
 # TODO:
 # implement '-f' flag just to update ones that are flagged
-# money in bank?
-check_failure = False
 
+# Parse any incoming arguments
+parser = argparse.ArgumentParser(description='Hypixel Skyblock Guild Stats')
+parser.add_argument('-f', dest='checkfailure', action='store_const',
+                    const=True, default=False,
+                    help='Only checks any failed members')
+
+args = parser.parse_args()
+
+# Set arguments from command line
+CHECK_FAILURE = args.checkfailure
+
+# Get environment variables
 api_key =  os.environ.get('HYPIXEL_API_KEY')
 spreadsheet_id = os.environ.get('STATS_SHEETS_ID')
 
+# Spreadsheet permissions
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+# Xp needed for skill level map
 xp_needed = {
     0: 0,
     1: 50,
@@ -76,6 +89,14 @@ xp_needed = {
 }
 
 
+# Gets a player uuid from their username
+async def get_uuid(username):
+    url = "https://api.mojang.com/users/profiles/minecraft/" + username
+    response = httpx.get(url)
+    return response
+
+
+# Gets a hypixel player profile given a player `uuid`
 async def get_profile(uuid):
     url = 'https://api.hypixel.net/player'
     print(".", end="")
@@ -87,6 +108,7 @@ async def get_profile(uuid):
     return json
 
 
+# Gets skyblock profiles from hypixel given hypixel player `profile`
 async def get_skyblock(profile):
     url = 'https://api.hypixel.net/skyblock/profile'
     print(".", end="")
@@ -98,12 +120,7 @@ async def get_skyblock(profile):
     return json
 
 
-async def get_uuid(name):
-    url = "https://api.mojang.com/users/profiles/minecraft/" + name
-    response = httpx.get(url)
-    return response
-
-
+# Get the skyblock profile from `profile` that is specified by `name`
 def get_profile_id(profile, name):
     profiles = profile['player']['stats']['SkyBlock']['profiles']
     for p in profiles:
@@ -116,6 +133,7 @@ def get_profile_id(profile, name):
     return None
 
 
+# Get stats from player `name` with skyblock profile name `cutename`
 def get_stats(name, cutename):
     name = asyncio.run(get_uuid(name))
     id = name.json()['id']
@@ -127,12 +145,12 @@ def get_stats(name, cutename):
     profile_id = get_profile_id(profile, cutename)
     print("This is the profile: ", profile_id)
 
-
     response = asyncio.run(get_skyblock(profile_id))
     stats = response['profile']['members'][id]  # this should be the data
     return stats
 
 
+# Using the xp_needed dictionary, return a skill level given `xp` in that skill
 def get_level(xp):
     if xp == 0:
         return 0
@@ -287,7 +305,7 @@ members = spreadsheets()
 
 for i in range(len(members[0])):
 
-    if (check_failure and len(members[2][i]) == 0):
+    if (CHECK_FAILURE and len(members[2][i]) == 0):
         continue
 
     #stats = get_stats("spysick99", "Zucchini")
