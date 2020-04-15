@@ -33,6 +33,9 @@ spreadsheet_id = os.environ.get('STATS_SHEETS_ID')
 # Spreadsheet permissions
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
+# Make global variables
+service = None
+
 # Xp needed for skill level map
 xp_needed = {
     0: 0,
@@ -172,7 +175,11 @@ def get_level(xp):
     return lvl
 
 
-def spreadsheets():
+# Authenticates and sets up service with google sheets
+def setup_spreadsheets():
+    # use the global var service so later methods can access sheets
+    global service
+
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -194,6 +201,10 @@ def spreadsheets():
 
     service = build('sheets', 'v4', credentials=creds)
 
+
+# Gets the (names, profiles, failure_status) from the spreadsheet
+# Currently those are the first 3 columns
+def spreadsheets():
     # A2:A gets names
     # B2:B gets profiles
     sheet = service.spreadsheets()
@@ -209,31 +220,11 @@ def spreadsheets():
                                 range="C3:C").execute()
     failure = result.get('values', [])
 
-
     return (names, profiles, failure)
 
+
+# Inserts a user's data into the spreadsheet
 def insert_spreadsheet(user_data, row):
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-
-    service = build('sheets', 'v4', credentials=creds)
-
     values = [
         ["",
         user_data['skill_average'],
@@ -264,28 +255,8 @@ def insert_spreadsheet(user_data, row):
         valueInputOption="RAW", body=body).execute()
 
 
+# This sets the failure flag in a row inside the spreadsheet
 def fail_spreadsheet(row):
-    creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-
-    service = build('sheets', 'v4', credentials=creds)
-
     values = [
         ['T']
     ]
@@ -301,6 +272,9 @@ def fail_spreadsheet(row):
         valueInputOption="RAW", body=body).execute()
 
 
+# --------------------------------------------
+# This is the stuff that actually runs in main
+setup_spreadsheets()
 members = spreadsheets()
 
 for i in range(len(members[0])):
@@ -338,25 +312,6 @@ for i in range(len(members[0])):
         print("User failed!!!")
         time.sleep(3)
         continue
-
-
-    """
-    print("foraging: ", foraging)
-    print("farming: ", farming)
-    print("alchemy: ", alchemy)
-    print("combat: ", combat)
-    print("enchanting: ", enchanting)
-    print("mining: ", mining)
-    print("fishing: ", fishing)
-    """
-
-
-    """
-    print("zombie: ", zombie)
-    print("spider: ", spider)
-    print("wolf: ", wolf)
-    print("total slayer:", total_slayer)
-    """
 
     insert_spreadsheet(user_data, i+3)
 
