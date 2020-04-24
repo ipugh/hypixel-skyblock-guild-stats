@@ -11,9 +11,6 @@ from google.auth.transport.requests import Request
 import sys
 import argparse
 
-# TODO:
-# implement '-f' flag just to update ones that are flagged
-
 # Parse any incoming arguments
 parser = argparse.ArgumentParser(description='Hypixel Skyblock Guild Stats')
 parser.add_argument('-f', dest='checkfailure', action='store_const',
@@ -32,7 +29,7 @@ spreadsheet_id = os.environ.get('STATS_SHEETS_ID')
 # Spreadsheet permissions
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Make global variables
+# Initialize global variables
 service = None
 
 # Xp needed for skill level map
@@ -101,7 +98,6 @@ async def get_uuid(username):
 # Gets a hypixel player profile given a player `uuid`
 async def get_profile(uuid):
     url = 'https://api.hypixel.net/player'
-    print(".", end="")
     response = httpx.get(
         url,
         params={'key': api_key, 'uuid': uuid},
@@ -113,7 +109,6 @@ async def get_profile(uuid):
 # Gets skyblock profiles from hypixel given hypixel player `profile`
 async def get_skyblock(profile):
     url = 'https://api.hypixel.net/skyblock/profile'
-    print(".", end="")
     response = httpx.get(
         url,
         params={'key': api_key, 'profile': profile},
@@ -126,10 +121,8 @@ async def get_skyblock(profile):
 def get_profile_id(profile, name):
     profiles = profile['player']['stats']['SkyBlock']['profiles']
     for p in profiles:
-        print(p)
-        print(profiles[p]['cute_name'])
-        print(str(name).lower)
         if str(profiles[p]['cute_name']).lower() == name.lower():
+            print(", profile: ", profiles[p]['cute_name'], "- ", end="")
             return str(p)
 
     return None
@@ -139,13 +132,10 @@ def get_profile_id(profile, name):
 def get_stats(name, cutename):
     name = asyncio.run(get_uuid(name))
     id = name.json()['id']
-    print(id)
 
     profile = asyncio.run(get_profile(id))
-    print(profile['player']['stats']['SkyBlock'])
 
     profile_id = get_profile_id(profile, cutename)
-    print("This is the profile: ", profile_id)
 
     response = asyncio.run(get_skyblock(profile_id))
     stats = response['profile']['members'][id]  # this should be the data
@@ -273,6 +263,10 @@ def fail_spreadsheet(row):
 
 # --------------------------------------------
 # This is the stuff that actually runs in main
+
+if (CHECK_FAILURE):
+    print("Only checking for failed users")
+
 setup_spreadsheets()
 members = spreadsheets()
 
@@ -281,14 +275,10 @@ for i in range(len(members[0])):
     if (CHECK_FAILURE and len(members[2][i]) == 0):
         continue
 
-    #stats = get_stats("spysick99", "Zucchini")
     user_data = {}
-    print(members[0][i], members[1][i])
     try:
+        print(members[0][i][0], end="")
         stats = get_stats(members[0][i][0], members[1][i][0])
-        #print(stats)
-        #for key in stats:
-        #    print(key)
         user_data['foraging'] = get_level(stats['experience_skill_foraging'])
         user_data['farming'] = get_level(stats['experience_skill_farming'])
         user_data['alchemy'] = get_level(stats['experience_skill_alchemy'])
@@ -308,10 +298,11 @@ for i in range(len(members[0])):
         user_data['gifts_given'] = stats['stats']['gifts_given']
     except:
         fail_spreadsheet(i+3)
-        print("User failed!!!")
+        print("Failed")
         time.sleep(3)
         continue
 
     insert_spreadsheet(user_data, i+3)
+    print("Success")
 
     time.sleep(3)
