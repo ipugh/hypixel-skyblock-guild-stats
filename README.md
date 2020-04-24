@@ -30,3 +30,4 @@ Header:
 - Add more values that can be used in the spreadsheet
 - Organize code into separate files
 - Remove magic numbers
+- Find a better way to limit API calls than time.sleep
