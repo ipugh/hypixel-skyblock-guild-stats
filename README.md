@@ -31,3 +31,4 @@ Header:
 - Organize code into separate files
 - Remove magic numbers
 - Find a better way to limit API calls than time.sleep
+- Get guild members from guild API endpoint
